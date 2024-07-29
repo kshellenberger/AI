@@ -1,0 +1,442 @@
+
+<!-- saved from url=(0148)file:///Users/kimshellenberger/Library/CloudStorage/GoogleDrive-spedly20@gmail.com/My%20Drive/Computer%20backup/Desktop/School/D213/task1/213_1.html -->
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<style type="text/css">
+.inline {
+  background-color: #f7f7f7;
+  border:solid 1px #B0B0B0;
+}
+.error {
+	font-weight: bold;
+	color: #FF0000;
+}
+.warning {
+	font-weight: bold;
+}
+.message {
+	font-style: italic;
+}
+.source, .output, .warning, .error, .message {
+	padding: 0 1em;
+  border:solid 1px #F7F7F7;
+}
+.source {
+  background-color: #f5f5f5;
+}
+.left {
+  text-align: left;
+}
+.right {
+  text-align: right;
+}
+.center {
+  text-align: center;
+}
+.hl.num {
+  color: #AF0F91;
+}
+.hl.sng {
+  color: #317ECC;
+}
+.hl.com {
+  color: #AD95AF;
+  font-style: italic;
+}
+.hl.opt {
+  color: #000000;
+}
+.hl.def {
+  color: #585858;
+}
+.hl.kwa {
+  color: #295F94;
+  font-weight: bold;
+}
+.hl.kwb {
+  color: #B05A65;
+}
+.hl.kwc {
+  color: #55aa55;
+}
+.hl.kwd {
+  color: #BC5A65;
+  font-weight: bold;
+}
+</style>
+<title>Task 1 - 213</title>
+</head>
+
+<body>
+
+<p>Part I: Research Question
+A1.What is the outcome of a 120-day revenue forecast with an ARIMA model?
+</p>
+2.The goal is to determine if revenue can be reasonably accurately be predicted with an ARIMA model so that leadership can create a strategy to improve future revenue opportunities.
+<p></p>
+Part II: Method Justification
+<p></p>
+B.
+Stationarity
+The model assumes that the time series is stationary, implying a constant mean, variance, and autocorrelation over time. If it is not, differencing is applied to achieve stationarity.
+Invertibility
+Invertibility is another assumption, implying that the model's error terms can be expressed as a linear combination of current and past forecast errors.
+Autocorrelation violates one of the fundamental assumptions of many statistical analyses  that data is statistically independent. 
+
+<p></p>
+
+<div class="chunk" id="unnamed-chunk-1"><div class="rcode"><div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(tidyverse)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## ── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──
+## ✔ dplyr     1.1.4     ✔ readr     2.1.5
+## ✔ forcats   1.0.0     ✔ stringr   1.5.1
+## ✔ ggplot2   3.5.0     ✔ tibble    3.2.1
+## ✔ lubridate 1.9.3     ✔ tidyr     1.3.1
+## ✔ purrr     1.0.2     
+## ── Conflicts ────────────────────────────────────────── tidyverse_conflicts() ──
+## ✖ dplyr::filter() masks stats::filter()
+## ✖ dplyr::lag()    masks stats::lag()
+## ℹ Use the conflicted package (&lt;http://conflicted.r-lib.org/&gt;) to force all conflicts to become errors
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(ggplot2)</span>
+<span class="hl kwd">library</span><span class="hl def">(tseries)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## Registered S3 method overwritten by 'quantmod':
+##   method            from
+##   as.zoo.data.frame zoo
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(seasonal)</span>
+</pre></div>
+<div class="message"><pre class="knitr r">## 
+## Attaching package: 'seasonal'
+## 
+## The following object is masked from 'package:tibble':
+## 
+##     view
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">library</span><span class="hl def">(forecast)</span>
+<span class="hl kwd">library</span><span class="hl def">(rmarkdown)</span>
+<span class="hl kwd">library</span><span class="hl def">(knitr)</span>
+
+<span class="hl com"># Load and inspect the data</span>
+<span class="hl def">data</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">read.csv</span><span class="hl def">(</span><span class="hl sng">'/Users/kimshellenberger/Desktop/medical_time_series .csv'</span><span class="hl def">)</span>
+<span class="hl kwd">head</span><span class="hl def">(data)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##   Day    Revenue
+## 1   1  0.0000000
+## 2   2 -0.2923555
+## 3   3 -0.3277718
+## 4   4 -0.3399871
+## 5   5 -0.1248875
+## 6   6 -0.4915896
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">str</span><span class="hl def">(data)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## 'data.frame':	731 obs. of  2 variables:
+##  $ Day    : int  1 2 3 4 5 6 7 8 9 10 ...
+##  $ Revenue: num  0 -0.292 -0.328 -0.34 -0.125 ...
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">###III: Data Preparation</span>
+<span class="hl com">#C1.Provide a line graph visualizing the realization of the time series.</span>
+
+<span class="hl com"># 1. Line graph visualization</span>
+<span class="hl kwd">ggplot</span><span class="hl def">(data,</span> <span class="hl kwd">aes</span><span class="hl def">(</span><span class="hl kwc">x</span> <span class="hl def">= Day,</span> <span class="hl kwc">y</span> <span class="hl def">= Revenue))</span> <span class="hl opt">+</span>
+  <span class="hl kwd">geom_line</span><span class="hl def">()</span> <span class="hl opt">+</span>
+  <span class="hl kwd">labs</span><span class="hl def">(</span><span class="hl kwc">title</span> <span class="hl def">=</span> <span class="hl sng">"Time Series Visualization"</span><span class="hl def">,</span>
+       <span class="hl kwc">x</span> <span class="hl def">=</span> <span class="hl sng">"Day"</span><span class="hl def">,</span>
+       <span class="hl kwc">y</span> <span class="hl def">=</span> <span class="hl sng">"Revenue"</span><span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="./Task 1 - 213_files/unnamed-chunk-1-1.png" alt="plot of chunk unnamed-chunk-1" class="plot"></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com">####2.Describe the time step formatting of the realization, including&nbsp;any&nbsp;gaps in measurement and the length of the sequence.</span>
+
+<span class="hl com">#The time step formatting is in days which equals 2 years of data</span>
+<span class="hl com"># Check for any gaps in measurement</span>
+<span class="hl kwd">print</span><span class="hl def">(</span><span class="hl kwd">paste</span><span class="hl def">(</span><span class="hl sng">"Any gaps in measurement:"</span><span class="hl def">,</span> <span class="hl kwd">any</span><span class="hl def">(</span><span class="hl kwd">diff</span><span class="hl def">(data</span><span class="hl opt">$</span><span class="hl def">Day)</span> <span class="hl opt">!=</span> <span class="hl def">time_step)))</span>
+</pre></div>
+<div class="error"><pre class="knitr r">## Error in eval(expr, envir, enclos): object 'time_step' not found
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Length of the sequence</span>
+<span class="hl def">length_sequence</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">nrow</span><span class="hl def">(data)</span>
+
+<span class="hl com"># 3.Evaluate the stationarity of the time series.</span>
+<span class="hl kwd">adf.test</span><span class="hl def">(data</span><span class="hl opt">$</span><span class="hl def">Revenue)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## 
+## 	Augmented Dickey-Fuller Test
+## 
+## data:  data$Revenue
+## Dickey-Fuller = -2.5906, Lag order = 9, p-value = 0.3283
+## alternative hypothesis: stationary
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># Take first-order difference to remove trend</span>
+<span class="hl def">data</span><span class="hl opt">$</span><span class="hl def">diff_revenue</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">NA</span><span class="hl def">,</span> <span class="hl kwd">diff</span><span class="hl def">(data</span><span class="hl opt">$</span><span class="hl def">Revenue))</span>
+
+<span class="hl com"># Evaluate stationarity</span>
+<span class="hl def">adf_result</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">adf.test</span><span class="hl def">(data</span><span class="hl opt">$</span><span class="hl def">diff_revenue[</span><span class="hl opt">-</span><span class="hl num">1</span><span class="hl def">],</span> <span class="hl kwc">alternative</span> <span class="hl def">=</span> <span class="hl sng">"stationary"</span><span class="hl def">)</span>
+</pre></div>
+<div class="warning"><pre class="knitr r">## Warning in adf.test(data$diff_revenue[-1], alternative = "stationary"): p-value
+## smaller than printed p-value
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">print</span><span class="hl def">(adf_result)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## 
+## 	Augmented Dickey-Fuller Test
+## 
+## data:  data$diff_revenue[-1]
+## Dickey-Fuller = -7.2794, Lag order = 8, p-value = 0.01
+## alternative hypothesis: stationary
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">###The p-value is below .05 so that indicates stationary</span>
+
+
+
+<span class="hl com"># 4.Explain the steps you used to prepare the data for analysis, including the training and test set split.</span>
+<span class="hl def">length_sequence</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">nrow</span><span class="hl def">(data)</span>
+
+<span class="hl def">train_data</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data[</span><span class="hl num">1</span><span class="hl opt">:</span><span class="hl num">700</span><span class="hl def">,]</span>
+<span class="hl def">test_data</span> <span class="hl kwb">&lt;-</span> <span class="hl def">data[</span><span class="hl opt">-</span><span class="hl def">(</span><span class="hl num">1</span><span class="hl opt">:</span><span class="hl num">700</span><span class="hl def">),]</span>
+<span class="hl kwd">summary</span><span class="hl def">(test_data)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##       Day           Revenue       diff_revenue     
+##  Min.   :701.0   Min.   :15.25   Min.   :-1.17889  
+##  1st Qu.:708.5   1st Qu.:16.03   1st Qu.:-0.27805  
+##  Median :716.0   Median :18.51   Median : 0.09275  
+##  Mean   :716.0   Mean   :17.92   Mean   :-0.02011  
+##  3rd Qu.:723.5   3rd Qu.:19.03   3rd Qu.: 0.30914  
+##  Max.   :731.0   Max.   :20.31   Max.   : 1.14450
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">count</span><span class="hl def">(test_data)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##    n
+## 1 31
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com">####I checked for null and n/a in the original data prior to splitting the data into training and test.</span>
+
+<span class="hl com">#See the 2 attached files.</span>
+
+<span class="hl com">#The training and test data is split 80/20 </span>
+
+<span class="hl com"># Write train data to CSV</span>
+<span class="hl kwd">write.csv</span><span class="hl def">(train_data,</span> <span class="hl kwc">file</span> <span class="hl def">=</span> <span class="hl sng">"/Users/kimshellenberger/Desktop/train_data.csv"</span><span class="hl def">,</span> <span class="hl kwc">row.names</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+<span class="hl com"># Write test data to CSV</span>
+<span class="hl kwd">write.csv</span><span class="hl def">(test_data,</span> <span class="hl kwc">file</span> <span class="hl def">=</span> <span class="hl sng">"/Users/kimshellenberger/Desktop/test_data.csv"</span><span class="hl def">,</span> <span class="hl kwc">row.names</span> <span class="hl def">=</span> <span class="hl num">FALSE</span><span class="hl def">)</span>
+
+
+<span class="hl com"># Part IV: Model Identification and Analysis</span>
+<span class="hl com"># D.1.Report the annotated findings with visualizations of your data analysis, including the following elements:</span>
+
+<span class="hl com"># •the decomposed time series  •the presence or lack of a seasonal component  •trends </span>
+<span class="hl def">decomposed_ts</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">decompose</span><span class="hl def">(</span><span class="hl kwd">ts</span><span class="hl def">(data</span><span class="hl opt">$</span><span class="hl def">Revenue,</span> <span class="hl kwc">frequency</span> <span class="hl def">=</span> <span class="hl num">2</span><span class="hl def">),</span> <span class="hl sng">"multiplicative"</span><span class="hl def">)</span>
+<span class="hl com"># Plot the decomposed components</span>
+<span class="hl kwd">plot</span><span class="hl def">(decomposed_ts)</span>
+</pre></div>
+</div><div class="rimage default"><img src="./Task 1 - 213_files/unnamed-chunk-1-2.png" alt="plot of chunk unnamed-chunk-1" class="plot"></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># •the autocorrelation function </span>
+<span class="hl kwd">acf</span><span class="hl def">(data</span><span class="hl opt">$</span><span class="hl def">Revenue)</span>
+</pre></div>
+</div><div class="rimage default"><img src="./Task 1 - 213_files/unnamed-chunk-1-3.png" alt="plot of chunk unnamed-chunk-1" class="plot"></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Plot autocorrelation function</span>
+<span class="hl kwd">acf</span><span class="hl def">(data</span><span class="hl opt">$</span><span class="hl def">Revenue,</span> <span class="hl kwc">main</span> <span class="hl def">=</span> <span class="hl sng">"Autocorrelation Function"</span><span class="hl def">,</span> <span class="hl kwc">lag.max</span> <span class="hl def">=</span> <span class="hl num">9</span><span class="hl def">)</span>
+</pre></div>
+</div><div class="rimage default"><img src="./Task 1 - 213_files/unnamed-chunk-1-4.png" alt="plot of chunk unnamed-chunk-1" class="plot"></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># •the spectral density</span>
+<span class="hl kwd">spec.pgram</span><span class="hl def">(data</span><span class="hl opt">$</span><span class="hl def">Revenue)</span>
+</pre></div>
+</div><div class="rimage default"><img src="./Task 1 - 213_files/unnamed-chunk-1-5.png" alt="plot of chunk unnamed-chunk-1" class="plot"></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># 2.Identify an autoregressive integrated moving average (ARIMA) model that accounts for the observed trend and seasonality of the time series data.</span>
+<span class="hl def">arima_model</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">auto.arima</span><span class="hl def">(train_data</span><span class="hl opt">$</span><span class="hl def">Revenue)</span>
+<span class="hl kwd">summary</span><span class="hl def">(arima_model)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## Series: train_data$Revenue 
+## ARIMA(1,1,0) 
+## 
+## Coefficients:
+##          ar1
+##       0.4109
+## s.e.  0.0345
+## 
+## sigma^2 = 0.1938:  log likelihood = -417.86
+## AIC=839.72   AICc=839.74   BIC=848.82
+## 
+## Training set error measures:
+##                     ME      RMSE       MAE        MPE     MAPE      MASE
+## Training set 0.0144574 0.4395562 0.3543905 -0.2323458 7.729072 0.9246115
+##                      ACF1
+## Training set -0.001796746
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">accuracy</span><span class="hl def">(arima_model)</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##                     ME      RMSE       MAE        MPE     MAPE      MASE
+## Training set 0.0144574 0.4395562 0.3543905 -0.2323458 7.729072 0.9246115
+##                      ACF1
+## Training set -0.001796746
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">plot</span><span class="hl def">(arima_model</span><span class="hl opt">$</span><span class="hl def">residuals)</span>
+</pre></div>
+</div><div class="rimage default"><img src="./Task 1 - 213_files/unnamed-chunk-1-6.png" alt="plot of chunk unnamed-chunk-1" class="plot"></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># 3.Perform a forecast using the derived ARIMA model identified in part D2.</span>
+<span class="hl def">forecast_result</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">forecast</span><span class="hl def">(arima_model,</span> <span class="hl kwc">h</span> <span class="hl def">=</span> <span class="hl num">60</span><span class="hl def">)</span>
+<span class="hl kwd">plot</span><span class="hl def">(forecast_result)</span> <span class="hl com">#4.Provide the output and calculations of the analysis you performed.</span>
+</pre></div>
+</div><div class="rimage default"><img src="./Task 1 - 213_files/unnamed-chunk-1-7.png" alt="plot of chunk unnamed-chunk-1" class="plot"></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl def">forecast_result</span>
+</pre></div>
+<div class="output"><pre class="knitr r">##     Point Forecast     Lo 80    Hi 80     Lo 95    Hi 95
+## 701       16.95330 16.389180 17.51742 16.090553 17.81605
+## 702       17.06028 16.084724 18.03583 15.568297 18.55226
+## 703       17.10423 15.782926 18.42554 15.083467 19.12500
+## 704       17.12230 15.506348 18.73824 14.650918 19.59367
+## 705       17.12972 15.257048 19.00239 14.265717 19.99372
+## 706       17.13277 15.031566 19.23397 13.919258 20.34627
+## 707       17.13402 14.825691 19.44235 13.603737 20.66430
+## 708       17.13453 14.635765 19.63330 13.312997 20.95607
+## 709       17.13474 14.458892 19.81060 13.042382 21.22711
+## 710       17.13483 14.292845 19.97682 12.788388 21.48128
+## 711       17.13487 14.135910 20.13382 12.548358 21.72138
+## 712       17.13488 13.986762 20.28300 12.320249 21.94952
+## 713       17.13489 13.844357 20.42542 12.102455 22.16732
+## 714       17.13489 13.707859 20.56192 11.893698 22.37608
+## 715       17.13489 13.576592 20.69319 11.692941 22.57684
+## 716       17.13489 13.449997 20.81979 11.499331 22.77045
+## 717       17.13489 13.327608 20.94218 11.312154 22.95763
+## 718       17.13489 13.209034 21.06075 11.130810 23.13898
+## 719       17.13489 13.093937 21.17585 10.954784 23.31500
+## 720       17.13489 12.982028 21.28776 10.783635 23.48615
+## 721       17.13489 12.873058 21.39673 10.616979 23.65281
+## 722       17.13489 12.766805 21.50298 10.454478 23.81531
+## 723       17.13489 12.663075 21.60671 10.295838 23.97395
+## 724       17.13489 12.561698 21.70809 10.140796 24.12899
+## 725       17.13489 12.462520 21.80726  9.989116 24.28067
+## 726       17.13489 12.365404 21.90438  9.840590 24.42920
+## 727       17.13489 12.270227 21.99956  9.695028 24.57476
+## 728       17.13489 12.176876 22.09291  9.552260 24.71752
+## 729       17.13489 12.085250 22.18453  9.412131 24.85765
+## 730       17.13489 11.995258 22.27453  9.274500 24.99529
+## 731       17.13489 11.906814 22.36297  9.139237 25.13055
+## 732       17.13489 11.819843 22.44994  9.006225 25.26356
+## 733       17.13489 11.734271 22.53551  8.875355 25.39443
+## 734       17.13489 11.650034 22.61975  8.746526 25.52326
+## 735       17.13489 11.567072 22.70271  8.619646 25.65014
+## 736       17.13489 11.485328 22.78446  8.494629 25.77516
+## 737       17.13489 11.404750 22.86504  8.371395 25.89839
+## 738       17.13489 11.325289 22.94450  8.249871 26.01991
+## 739       17.13489 11.246900 23.02288  8.129986 26.13980
+## 740       17.13489 11.169542 23.10024  8.011676 26.25811
+## 741       17.13489 11.093174 23.17661  7.894881 26.37490
+## 742       17.13489 11.017759 23.25203  7.779544 26.49024
+## 743       17.13489 10.943263 23.32652  7.665612 26.60417
+## 744       17.13489 10.869652 23.40013  7.553035 26.71675
+## 745       17.13489 10.796897 23.47289  7.441765 26.82802
+## 746       17.13489 10.724967 23.54482  7.331757 26.93803
+## 747       17.13489 10.653835 23.61595  7.222971 27.04681
+## 748       17.13489 10.583476 23.68631  7.115366 27.15442
+## 749       17.13489 10.513864 23.75592  7.008904 27.26088
+## 750       17.13489 10.444977 23.82481  6.903550 27.36624
+## 751       17.13489 10.376792 23.89299  6.799269 27.47052
+## 752       17.13489 10.309288 23.96050  6.696031 27.57375
+## 753       17.13489 10.242444 24.02734  6.593803 27.67598
+## 754       17.13489 10.176243 24.09354  6.492557 27.77723
+## 755       17.13489 10.110666 24.15912  6.392266 27.87752
+## 756       17.13489 10.045696 24.22409  6.292902 27.97688
+## 757       17.13489  9.981315 24.28847  6.194440 28.07534
+## 758       17.13489  9.917509 24.35228  6.096857 28.17293
+## 759       17.13489  9.854262 24.41552  6.000129 28.26966
+## 760       17.13489  9.791560 24.47823  5.904234 28.36555
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl kwd">plot</span><span class="hl def">(forecast_result</span><span class="hl opt">$</span><span class="hl def">residuals)</span>
+</pre></div>
+</div><div class="rimage default"><img src="./Task 1 - 213_files/unnamed-chunk-1-8.png" alt="plot of chunk unnamed-chunk-1" class="plot"></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl kwd">Acf</span><span class="hl def">(forecast_result</span><span class="hl opt">$</span><span class="hl def">residuals)</span>
+</pre></div>
+</div><div class="rimage default"><img src="./Task 1 - 213_files/unnamed-chunk-1-9.png" alt="plot of chunk unnamed-chunk-1" class="plot"></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl kwd">pacf</span><span class="hl def">(forecast_result</span><span class="hl opt">$</span><span class="hl def">residuals)</span>
+</pre></div>
+</div><div class="rimage default"><img src="./Task 1 - 213_files/unnamed-chunk-1-10.png" alt="plot of chunk unnamed-chunk-1" class="plot"></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl kwd">qqnorm</span><span class="hl def">(forecast_result</span><span class="hl opt">$</span><span class="hl def">residuals)</span>
+</pre></div>
+</div><div class="rimage default"><img src="./Task 1 - 213_files/unnamed-chunk-1-11.png" alt="plot of chunk unnamed-chunk-1" class="plot"></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Ensure same length of test data and forecasted values</span>
+<span class="hl def">test_data</span> <span class="hl kwb">&lt;-</span> <span class="hl def">test_data[</span><span class="hl num">1</span><span class="hl opt">:</span><span class="hl kwd">min</span><span class="hl def">(</span><span class="hl kwd">length</span><span class="hl def">(test_data</span><span class="hl opt">$</span><span class="hl def">Revenue),</span> <span class="hl kwd">length</span><span class="hl def">(forecast_result</span><span class="hl opt">$</span><span class="hl def">mean)), ]</span>
+<span class="hl def">forecast_values</span> <span class="hl kwb">&lt;-</span> <span class="hl def">forecast_result</span><span class="hl opt">$</span><span class="hl def">mean[</span><span class="hl num">1</span><span class="hl opt">:</span><span class="hl kwd">min</span><span class="hl def">(</span><span class="hl kwd">length</span><span class="hl def">(test_data</span><span class="hl opt">$</span><span class="hl def">Revenue),</span> <span class="hl kwd">length</span><span class="hl def">(forecast_result</span><span class="hl opt">$</span><span class="hl def">mean))]</span>
+
+<span class="hl com"># Remove NA values from test data and forecasted values</span>
+<span class="hl def">test_data</span> <span class="hl kwb">&lt;-</span> <span class="hl def">test_data[</span><span class="hl opt">!</span><span class="hl kwd">is.na</span><span class="hl def">(test_data</span><span class="hl opt">$</span><span class="hl def">Revenue), ]</span>
+<span class="hl def">forecast_values</span> <span class="hl kwb">&lt;-</span> <span class="hl def">forecast_values[</span><span class="hl opt">!</span><span class="hl kwd">is.na</span><span class="hl def">(test_data</span><span class="hl opt">$</span><span class="hl def">Revenue)]</span>
+
+<span class="hl com"># Check spectral density</span>
+<span class="hl kwd">spec.pgram</span><span class="hl def">(data</span><span class="hl opt">$</span><span class="hl def">Revenue)</span>
+</pre></div>
+</div><div class="rimage default"><img src="./Task 1 - 213_files/unnamed-chunk-1-12.png" alt="plot of chunk unnamed-chunk-1" class="plot"></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl kwd">spec.pgram</span><span class="hl def">(train_data</span><span class="hl opt">$</span><span class="hl def">Revenue)</span>
+</pre></div>
+</div><div class="rimage default"><img src="./Task 1 - 213_files/unnamed-chunk-1-13.png" alt="plot of chunk unnamed-chunk-1" class="plot"></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl kwd">spec.pgram</span><span class="hl def">(forecast_result)</span>
+</pre></div>
+</div><div class="rimage default"><img src="./Task 1 - 213_files/unnamed-chunk-1-14.png" alt="plot of chunk unnamed-chunk-1" class="plot"></div><div class="rcode">
+<div class="source"><pre class="knitr r"><span class="hl com"># Part V: Data Summary and Implications</span>
+<span class="hl com"># E.Summarize your findings and assumptions by doing the following:</span>
+<span class="hl com"># 1. Discuss the results of your data analysis, including the following points:</span>
+<span class="hl com"># •the selection of an ARIMA model</span>
+
+<span class="hl com"># the ARIMA model was selected using auto.arima and it mad sense due to no seasonality.</span>
+
+<span class="hl com"># •the model evaluation procedure and error metric</span>
+<span class="hl com"># I used RMSE as the evaluation metric. The closer the outcome to 1 the better the forcast fit the test data. </span>
+<span class="hl def">rmse</span> <span class="hl kwb">&lt;-</span> <span class="hl kwd">sqrt</span><span class="hl def">(</span><span class="hl kwd">mean</span><span class="hl def">((test_data</span><span class="hl opt">$</span><span class="hl def">Revenue</span> <span class="hl opt">-</span> <span class="hl def">forecast_values)</span><span class="hl opt">^</span><span class="hl num">2</span><span class="hl def">))</span>
+<span class="hl def">rmse</span>
+</pre></div>
+<div class="output"><pre class="knitr r">## [1] 1.778914
+</pre></div>
+<div class="source"><pre class="knitr r"><span class="hl com"># 2.&nbsp;&nbsp;Provide an annotated visualization of the forecast of the final model compared to the test set.</span>
+<span class="hl kwd">plot</span><span class="hl def">(forecast_result,</span> <span class="hl kwc">main</span> <span class="hl def">=</span> <span class="hl sng">"Forecast with 95% Confidence Interval"</span><span class="hl def">)</span>
+<span class="hl kwd">lines</span><span class="hl def">(train_data</span><span class="hl opt">$</span><span class="hl def">Day, train_data</span><span class="hl opt">$</span><span class="hl def">Revenue,</span> <span class="hl kwc">col</span> <span class="hl def">=</span> <span class="hl sng">"blue"</span><span class="hl def">)</span>  <span class="hl com"># Train data</span>
+<span class="hl kwd">lines</span><span class="hl def">(test_data</span><span class="hl opt">$</span><span class="hl def">Day, test_data</span><span class="hl opt">$</span><span class="hl def">Revenue,</span> <span class="hl kwc">col</span> <span class="hl def">=</span> <span class="hl sng">"red"</span><span class="hl def">)</span>    <span class="hl com"># Test data</span>
+<span class="hl kwd">lines</span><span class="hl def">(forecast_result</span><span class="hl opt">$</span><span class="hl def">mean,</span> <span class="hl kwc">col</span> <span class="hl def">=</span> <span class="hl sng">"black"</span><span class="hl def">)</span>              <span class="hl com"># Forecast</span>
+<span class="hl kwd">lines</span><span class="hl def">(forecast_result</span><span class="hl opt">$</span><span class="hl def">lower[,</span><span class="hl num">2</span><span class="hl def">],</span> <span class="hl kwc">col</span> <span class="hl def">=</span> <span class="hl sng">"green"</span><span class="hl def">,</span> <span class="hl kwc">lty</span> <span class="hl def">=</span> <span class="hl num">2</span><span class="hl def">)</span> <span class="hl com"># 95% confidence interval lower bound</span>
+<span class="hl kwd">lines</span><span class="hl def">(forecast_result</span><span class="hl opt">$</span><span class="hl def">upper[,</span><span class="hl num">2</span><span class="hl def">],</span> <span class="hl kwc">col</span> <span class="hl def">=</span> <span class="hl sng">"green"</span><span class="hl def">,</span> <span class="hl kwc">lty</span> <span class="hl def">=</span> <span class="hl num">2</span><span class="hl def">)</span> <span class="hl com"># 95% confidence interval upper bound</span>
+<span class="hl kwd">legend</span><span class="hl def">(</span><span class="hl sng">"topleft"</span><span class="hl def">,</span> <span class="hl kwc">legend</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">"Train Data"</span><span class="hl def">,</span> <span class="hl sng">"Test Data"</span><span class="hl def">,</span> <span class="hl sng">"Forecast"</span><span class="hl def">,</span> <span class="hl sng">"95% Confidence Interval"</span><span class="hl def">),</span>
+       <span class="hl kwc">col</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl sng">"blue"</span><span class="hl def">,</span> <span class="hl sng">"red"</span><span class="hl def">,</span> <span class="hl sng">"black"</span><span class="hl def">,</span> <span class="hl sng">"green"</span><span class="hl def">),</span> <span class="hl kwc">lty</span> <span class="hl def">=</span> <span class="hl kwd">c</span><span class="hl def">(</span><span class="hl num">1</span><span class="hl def">,</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl num">1</span><span class="hl def">,</span> <span class="hl num">2</span><span class="hl def">))</span>
+</pre></div>
+</div><div class="rimage default"><img src="./Task 1 - 213_files/unnamed-chunk-1-15.png" alt="plot of chunk unnamed-chunk-1" class="plot"></div></div>
+<p></p> 
+•the prediction interval of the forecast
+<p></p> 
+I went with a 95% forecast interval because of the low likelihood of accuracy due to the company being new and only having 2 years of data, the 1st of which started in the negative.
+<p></p> 
+•a justification of the forecast length
+<p></p> 
+The forecast length was 60 days which is the length of the test data plus another month. The intention was to prove the model fit the test data but wasn't overfit. 
+<p></p> 
+<p></p> 3.Recommend a course of action based on your results.
+<p></p>
+It is recommended to continue updating the revenue on a monthly basis and rerun the model to improve the accuracy of the forecast. The data in the first year may have skewed the forecast due to it being the beginning of business and revenue started at zero. This forecast shouldn’t be taken too seriously since the span of data is not extensive. The lack of trends doesn’t allow for great prediction.
+<p></p>
+<p></p>
+G.Cite the web sources you used to acquire third-party code to support the application.
+
+https://www.datascienceinstitute.net/blog/time-series-decomposition-in-r:~:text=R%20uses%20the%20default%20additive,first%20and%20last%20few%20values.
+<p></p>
+https://wgu.hosted.panopto.com/Panopto/Pages/Viewer.aspx?id=1aaf2389-6483-4000-b498-b14f00441d57
+<p></p>
+<p></p>
+H.Acknowledge sources, using in-text citations and references, for content that is quoted, paraphrased, or summarized.
+<p></p>
+https://www.datascienceinstitute.net/blog/time-series-decomposition-in-r:~:text=R%20uses%20the%20default%20additive,first%20and%20last%20few%20values.
+<p></p>
+https://www.publichealth.columbia.edu/research/population-health-methods/box-jenkins-methodology#:~:text=Stationarity%20Assumption%3A,mean%20and%20variance%20over%20time.
+<p></p>
+https://medium.com/@shaileydash/an-overview-of-time-series-forecasting-models-part-1-classical-time-series-forecasting-models-2d877de76e0f
+<p></p>
+https://www.financestrategists.com/wealth-management/fundamental-vs-technical-analysis/autoregressive-integrated-moving-average-arima/
+<p></p>
+https://www.influxdata.com/blog/autocorrelation-in-time-series-data/. <p></p>
+<p></p>
+
+
+end.rcode--&gt;
+
+end.rcode--&gt;
+
+
+
+</body></html>
